@@ -1,8 +1,11 @@
 package me.astralisvox.astralibs;
 
+import me.astralisvox.astralibs.chat.AudienceManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import net.kyori.adventure.title.Title;
 import net.md_5.bungee.api.ChatMessageType;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
@@ -19,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.net.URL;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -36,44 +40,12 @@ public class Utilities {
 
     public static void setInstance(final JavaPlugin instance) { Utilities.instance = instance; }
 
-    public static TextComponent componentDeserializer(String message) {
-        return componentSerializer.deserialize(message);
+    public static Component parse(String input) {
+         return componentSerializer.deserialize(input);
     }
 
-    public static List<TextComponent> componentDeserializer(List<String> messages) {
-        final List<TextComponent> componentList = new ArrayList<>();
-        for(String message : messages) {
-            componentList.add(componentDeserializer(message));
-        }
-
-        return componentList;
-    }
-
-    public static String componentSerializerFromString(String value) {
-        return componentSerializer.serialize(Component.text(value));
-    }
-
-    /**
-     * Takes a TextComponent and serializes and colours it into a String
-     *
-     * @param component (The message to serialize into a string)
-     * @return String (The string containing the coloured messages)
-     */
-    public static String componentSerializer(TextComponent component) {
-        return componentSerializer.serialize(component);
-    }
-
-    public static String componentSerializer(Component component) {
-        return componentSerializer.serialize(component);
-    }
-
-    public static List<String> componentSerializer(List<TextComponent> components) {
-        final List<String> componentList = new ArrayList<>();
-        for(TextComponent component : components) {
-            componentList.add(componentSerializer(component));
-        }
-
-        return componentList;
+    public static List<Component> parseList(List<String> messages) {
+        return messages.stream().map(Utilities::parse).toList();
     }
 
     /**
@@ -83,79 +55,55 @@ public class Utilities {
      * @param messages (The list of strings to colourise)
      * @return (The list of strings that have been colourised)
      */
-    public static List<String> stringColouriseList(List<String> messages) {
-        final List<String> finalMessagesList = new ArrayList<>();
+    public static List<Component> stringColouriseList(List<String> messages) {
+        final List<Component> finalMessagesList = new ArrayList<>();
 
         for(String message : messages) {
-            finalMessagesList.add(componentSerializer(componentDeserializer(message)));
+            finalMessagesList.add(parse(message));
         }
 
         return  finalMessagesList;
     }
 
-    /**
-     * Send the target player a message with {@link #componentDeserializer(String)} support.
-     * @param player (Needs to be an online player)
-     * @param message (String)
-     */
-    public static void message(final CommandSender player, final TextComponent message) {
-        player.sendMessage(componentSerializer.serialize(message));
+    public static void message(final CommandSender sender, final String message) {
+        if(sender instanceof Player) {
+            AudienceManager.getAudiences().player((Player) sender).sendMessage(parse(message));
+        } else {
+            AudienceManager.getAudiences().sender(sender).sendMessage(parse(message));
+        }
     }
 
-    /**
-     * Send the target player a list of messages with {@link #componentDeserializer(String)} support.
-     * @param player (Needs to be an online player)
-     * @param messages (String List)
-     */
     public static void message(final CommandSender player, final String... messages) {
         for (final String message : messages) {
-            player.sendMessage(componentSerializerFromString(message));
+            message(player, message);
         }
     }
 
-    /**
-     * Send the target player a list of messages with {@link #componentDeserializer(String)} support.
-     * @param player (Needs to be an online player)
-     * @param messages (String List)
-     */
-    public static void message(final CommandSender player, final List<String> messages) {
-        for (final String message : messages) {
-            message(player, componentDeserializer(message));
-        }
-    }
-
-    /**
-     * Send a message to the entire server with {@link #componentDeserializer(String)} support.
-     * @param broadcastConsole (Boolean)
-     * @param message (String)
-     */
-    public static void broadcast(final boolean broadcastConsole, final String message) {
-        if(!broadcastConsole) {
-            for(Player player : Bukkit.getOnlinePlayers()) {
-                message(player, message);
+    public static void message(final CommandSender sender, final List<Component> components) {
+        for (Component c : components) {
+            Component combined = Component.empty().append(c);
+            if(sender instanceof Player) {
+                AudienceManager.getAudiences().player((Player) sender).sendMessage(combined);
+            } else {
+                AudienceManager.getAudiences().sender(sender).sendMessage(combined);
             }
-            return;
+
         }
-        Bukkit.getServer().broadcastMessage(componentSerializer(componentDeserializer(message)));
     }
 
-    /**
-     * Send a list of messages to the entire server with {@link #componentDeserializer(String)} support.
-     * @param messages (String List)
-     */
-    public static void broadcast(final boolean broadcastConsole, final String... messages) {
+    public static void broadcast(final String message) {
+        AudienceManager.getAudiences().all().sendMessage(parse(message));
+    }
+
+    public static void broadcast(final String... messages) {
         for (final String message : messages) {
-            broadcast(broadcastConsole, message);
+            broadcast(message);
         }
     }
 
-    /**
-     * Send a list of messages to the entire server with {@link #componentDeserializer(String)} support.
-     * @param messages (String List)
-     */
-    public static void broadcast(final boolean broadcastConsole, final List<String> messages) {
+    public static void broadcast(final List<String> messages) {
         for(final String message: messages) {
-            broadcast(broadcastConsole, message);
+            broadcast(message);
         }
     }
 
@@ -190,9 +138,9 @@ public class Utilities {
                 .append(Component.text(" " + message));
 
         if (prefix) {
-            Bukkit.getLogger().info(componentSerializer(messageComponent));
+            Bukkit.getLogger().info(componentSerializer.serialize(messageComponent));
         } else {
-            Bukkit.getLogger().info(componentSerializer(Component.text(message)));
+            Bukkit.getLogger().info(componentSerializer.serialize(Component.text(message)));
         }
     }
 
@@ -222,9 +170,9 @@ public class Utilities {
                 .append(Component.text(" " + message));
 
         if (prefix) {
-            Bukkit.getLogger().warning(componentSerializer(messageComponent));
+            Bukkit.getLogger().warning(componentSerializer.serialize(messageComponent));
         } else {
-            Bukkit.getLogger().warning(componentSerializer(Component.text(message)));
+            Bukkit.getLogger().warning(componentSerializer.serialize(Component.text(message)));
         }
     }
 
@@ -248,9 +196,9 @@ public class Utilities {
                 .append(Component.text(" " + message));
 
         if (prefix) {
-            Bukkit.getLogger().severe(componentSerializer(messageComponent));
+            Bukkit.getLogger().severe(componentSerializer.serialize(messageComponent));
         } else {
-            Bukkit.getLogger().severe(componentSerializer(Component.text(message)));
+            Bukkit.getLogger().severe(componentSerializer.serialize(Component.text(message)));
         }
     }
 
@@ -264,12 +212,6 @@ public class Utilities {
         }
     }
 
-    /**
-     * Send the target player an ActionBar message with {@link #componentDeserializer(String)} support.
-     * WILL NOT WORK ON VERSIONS PRE-1.9. WILL PRINT A MESSAGE IN CHAT INSTEAD.
-     * @param player (Needs to be an online player)
-     * @param message (String)
-     */
     public static void sendActionBar(final Player player, final String message) {
         try {
             player.spigot().sendMessage(ChatMessageType.ACTION_BAR, net.md_5.bungee.api.chat.TextComponent.fromLegacyText(message));
@@ -278,13 +220,6 @@ public class Utilities {
         }
     }
 
-    /**
-     * Send the target player an ActionBar message with {@link #componentDeserializer(String)} support.
-     * WILL NOT WORK ON VERSIONS PRE-1.9. WILL PRINT A MESSAGE IN CHAT IF SENDMESSAGE IS TRUE.
-     * @param player      (Needs to be an online player)
-     * @param message     (String)
-     * @param sendMessage (boolean)
-     */
     public static void sendActionBar(final Player player, final String message, final boolean sendMessage) {
         try {
             player.spigot().sendMessage(ChatMessageType.ACTION_BAR, net.md_5.bungee.api.chat.TextComponent.fromLegacyText(message));
@@ -295,27 +230,27 @@ public class Utilities {
         }
     }
 
-    /**
-     * Send the target player a title message with pre-set animation times. Has {@link #componentDeserializer(String)} support.
-     * @param player (Needs to be an online player)
-     * @param title (String)
-     * @param subtitle (String)
-     */
     public static void sendTitle(final Player player, final String title, final String subtitle) {
-        player.sendTitle(componentSerializer(Component.text(title)), componentSerializer(Component.text(subtitle)), 20, 20 * 3, 10);
+        Component titleComponent = parse(title);
+        Component subtitleComponent = parse(subtitle);
+
+        Title adventureTitle = Title.title(titleComponent, subtitleComponent);
+        AudienceManager.getAudiences().sender(player).showTitle(adventureTitle);
     }
 
-    /**
-     * Send the target player a title message with custom animation times. Has {@link #componentDeserializer(String)} support.
-     * @param player (Needs to be an online player)
-     * @param title (String)
-     * @param subtitle (String)
-     * @param fadein (Int - Seconds)
-     * @param stay (Int - Seconds)
-     * @param fadeout (Int - Seconds)
-     */
+
     public static void sendTitle(final Player player, final String title, final String subtitle, final int fadein, final int stay, final int fadeout) {
-        player.sendTitle(componentSerializer(Component.text(title)), componentSerializer(Component.text(subtitle)), 20 * fadein, 20 * stay, 20 * fadeout);
+        Component titleComponent = parse(title);
+        Component subtitleComponent = parse(subtitle);
+
+        Title.Times times = Title.Times.times(
+                Duration.ofSeconds(fadein),
+                Duration.ofSeconds(stay),
+                Duration.ofMillis(fadeout)
+        );
+
+        Title adventureTitle = Title.title(titleComponent, subtitleComponent, times);
+        AudienceManager.getAudiences().sender(player).showTitle(adventureTitle);
     }
 
     /**
@@ -421,19 +356,5 @@ public class Utilities {
      */
     public static void executeConsoleCommand(final String command) {
         Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(), command);
-    }
-
-    public static void getVersion(final Consumer<String> consumer) {
-        Bukkit.getScheduler().runTaskAsynchronously(instance, () -> {
-            try (final InputStream is = new URL("https://api.spigotmc.org/legacy/update.php?resource=" + resourceId).openStream();
-                 final Scanner scanner = new Scanner(is)) {
-                if (scanner.hasNext()) {
-                    consumer.accept(scanner.next());
-                    latestVersion = consumer.toString();
-                }
-            } catch (final IOException ex) {
-                Utilities.logInfo(true, "Unable to look for updates: " + ex.getMessage());
-            }
-        });
     }
 }

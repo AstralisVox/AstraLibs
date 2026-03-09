@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "me.astralisvox"
-version = "1.0-SNAPSHOT"
+version = "1.0.1"
 
 repositories {
     mavenCentral()
@@ -21,10 +21,11 @@ repositories {
 }
 
 dependencies {
-    implementation("com.tchristofferson:ConfigUpdater:1.1-SNAPSHOT")
-    implementation("net.kyori:adventure-api:4.12.0")
-    implementation("net.kyori:adventure-text-serializer-legacy:4.12.0")
-    compileOnly("dev.dbassett:skullcreator:3.0.1")
+    implementation("com.tchristofferson:ConfigUpdater:2.2")
+    implementation("net.kyori:adventure-api:4.17.0")
+    implementation("net.kyori:adventure-text-serializer-legacy:4.17.0")
+    implementation("net.kyori:adventure-text-minimessage:4.17.0")
+    implementation("net.kyori:adventure-platform-bukkit:4.3.2")
     compileOnly("org.spigotmc:spigot-api:1.21.11-R0.2-SNAPSHOT")
     compileOnly("org.projectlombok:lombok:1.18.24")
 }
