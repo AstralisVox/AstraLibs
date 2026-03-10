@@ -8,6 +8,7 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.title.Title;
 import net.md_5.bungee.api.ChatMessageType;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandMap;
@@ -213,16 +214,15 @@ public class Utilities {
     }
 
     public static void sendActionBar(final Player player, final String message) {
-        try {
-            player.spigot().sendMessage(ChatMessageType.ACTION_BAR, net.md_5.bungee.api.chat.TextComponent.fromLegacyText(message));
-        } catch (final Throwable throwable) {
-            message(player, message);
-        }
+        String legacyColourCodes = ChatColor.translateAlternateColorCodes('&', message);
+        player.spigot().sendMessage(ChatMessageType.ACTION_BAR, net.md_5.bungee.api.chat.TextComponent.fromLegacy(legacyColourCodes));
     }
 
+
     public static void sendActionBar(final Player player, final String message, final boolean sendMessage) {
+        String legacyColourCodes = ChatColor.translateAlternateColorCodes('&', message);
         try {
-            player.spigot().sendMessage(ChatMessageType.ACTION_BAR, net.md_5.bungee.api.chat.TextComponent.fromLegacyText(message));
+            player.spigot().sendMessage(ChatMessageType.ACTION_BAR, net.md_5.bungee.api.chat.TextComponent.fromLegacy(legacyColourCodes));
         } catch (final Throwable throwable) {
             if (sendMessage) {
                 message(player, message);
